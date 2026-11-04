@@ -15,7 +15,7 @@ Data masukan
   - hotspot (opsional)   : CSV FIRMS (latitude, longitude, acq_date, acq_time)
   - soil moisture (opsional): belum ada di GRIB; lihat load_soil_moisture
 
-Jalankan:  python rda_karhutla.py --grib data.grib --out hasil
+Jalankan:  python rda_karhutla.py --grib data_1.grib --start 2026-09-01 --days 30 --out hasil
 """
 import argparse, os, datetime as dt
 import numpy as np
@@ -153,7 +153,7 @@ def run(params, grib_path, t_start, days, ignition, out_frames=None, verbose=Tru
     D = P["Dg"] * G + P["Dn"] * (1 - G); r = P["rg"] * G + P["rn"] * (1 - G)
     g = read_grib1(grib_path) if "_g" not in P else P["_g"]
     up = P["uparam"]; T, lat_s, lon_s, _ = g[up]
-    t0 = int((t_start - T[0]).total_seconds() // 3600); n = int(days * 24 / P["dt_h"])
+    t0 = int((t_start - T[0]).total_seconds() // 3600); n = int(days * 24 / P["dt_h"])\n    if t0 < 0 or t0 + n > len(T):\n        raise ValueError(f"Data angin u100/v100 tidak mencakup seluruh simulasi: diminta indeks jam {t0}..{t0+n-1}, tersedia 0..{len(T)-1}")
     F = np.zeros(LAT.shape); B = np.ones(LAT.shape)
     for (la, lo, amp, rad) in ignition:          # titik api awal (Gaussian kecil)
         if P.get("snap_peat", True):             # geser ke sel gambut terdekat
@@ -290,7 +290,7 @@ def main():
 
     fig, ax = plt.subplots(figsize=(6, 5)); step_ = 20
     ax.quiver(R0["LON"][::step_, ::step_], R0["LAT"][::step_, ::step_],
-              regrid(g[246][3][int((t_start - g[246][0][0]).total_seconds() // 3600)], g[165][1], g[165][2], R0["LAT"], R0["LON"])[::step_, ::step_],
+              regrid(g[246][3][int((t_start - g[246][0][0]).total_seconds() // 3600)], g[246][1], g[246][2], R0["LAT"], R0["LON"])[::step_, ::step_],
               regrid(g[247][3][int((t_start - g[246][0][0]).total_seconds() // 3600)], g[165][1], g[165][2], R0["LAT"], R0["LON"])[::step_, ::step_])
     ax.set_title("Angin 100 m (ERA5) pada " + a.start); plt.savefig(os.path.join(a.out, "fig3_angin.png"), dpi=150); plt.close()
 
