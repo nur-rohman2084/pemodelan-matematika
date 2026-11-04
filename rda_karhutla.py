@@ -291,7 +291,7 @@ def main():
     fig, ax = plt.subplots(figsize=(6, 5)); step_ = 20
     ax.quiver(R0["LON"][::step_, ::step_], R0["LAT"][::step_, ::step_],
               regrid(g[246][3][int((t_start - g[246][0][0]).total_seconds() // 3600)], g[246][1], g[246][2], R0["LAT"], R0["LON"])[::step_, ::step_],
-              regrid(g[247][3][int((t_start - g[246][0][0]).total_seconds() // 3600)], g[165][1], g[165][2], R0["LAT"], R0["LON"])[::step_, ::step_])
+              regrid(g[247][3][int((t_start - g[246][0][0]).total_seconds() // 3600)], g[246][1], g[246][2], R0["LAT"], R0["LON"])[::step_, ::step_])
     ax.set_title("Angin 100 m (ERA5) pada " + a.start); plt.savefig(os.path.join(a.out, "fig3_angin.png"), dpi=150); plt.close()
 
 if __name__ == "__main__":
