@@ -9,7 +9,7 @@ Skema FDM: difusi = central difference (bentuk flux, D variabel), adveksi = upwi
 waktu = Euler eksplisit. Satuan internal: km dan jam.
 
 Data masukan
-  - data.grib            : ERA5 u10, v10, t2m per jam (GRIB1, tanpa library eksternal)
+  - data_1.grib          : ERA5 u100, v100 per jam (GRIB1, tanpa library eksternal)
   - Indonesia_peat_lands.csv : hanya atribut (TANPA geometri) -> mask gambut G harus
                               diganti shapefile/GeoTIFF asli (lihat load_peat_mask)
   - hotspot (opsional)   : CSV FIRMS (latitude, longitude, acq_date, acq_time)
@@ -67,7 +67,7 @@ def read_grib1(path):
         out[prm] = (T, lat[::-1].copy(), lon, A)
     return out
 
-PARAM = {165: "u10", 166: "v10", 167: "t2m"}   # ECMWF table 128
+PARAM = {165: "u10", 166: "v10", 167: "t2m", 246: "u100", 247: "v100"}   # ECMWF table 128/228
 
 # --------------------------------------------------------------------------
 # 2. Grid, interpolasi, input lingkungan
@@ -145,14 +145,14 @@ def run(params, grib_path, t_start, days, ignition, out_frames=None, verbose=Tru
     """Satu simulasi. Return dict {F_final, frames, times, G, grid, dt}."""
     P = dict(dlon=0.02, dt_h=1.0, K=1.0, Dg=0.05, Dn=0.01, rg=0.05, rn=0.01,
              alpha=2.0, m_const=0.3, kappa=0.01, Fc=0.5, mu=0.01, beta=0.004, use_fuel=True,
-             bbox=(-3.0, 6.0, 110.0, 117.0), peat_path=None, sm_path=None)
+             bbox=(-3.0, -1.0, 111.0, 116.0), peat_path=None, sm_path=None, uparam=246)
     P.update(params)
     lat, lon, LAT, LON, dx, dy = make_grid(*P["bbox"], P["dlon"])
     G = load_peat_mask(LAT, LON, P["peat_path"])
     m = load_soil_moisture(LAT, LON, P["m_const"], P["sm_path"])
     D = P["Dg"] * G + P["Dn"] * (1 - G); r = P["rg"] * G + P["rn"] * (1 - G)
     g = read_grib1(grib_path) if "_g" not in P else P["_g"]
-    T, lat_s, lon_s, _ = g[165]
+    up = P["uparam"]; T, lat_s, lon_s, _ = g[up]
     t0 = int((t_start - T[0]).total_seconds() // 3600); n = int(days * 24 / P["dt_h"])
     F = np.zeros(LAT.shape); B = np.ones(LAT.shape)
     for (la, lo, amp, rad) in ignition:          # titik api awal (Gaussian kecil)
@@ -165,8 +165,8 @@ def run(params, grib_path, t_start, days, ignition, out_frames=None, verbose=Tru
     save_every = max(1, n // (out_frames or 6))
     for k in range(n):
         h = t0 + int(k * P["dt_h"])
-        U = P["kappa"] * 3.6 * regrid(g[165][3][h], lat_s, lon_s, LAT, LON)   # m/s -> km/jam, x kappa
-        V = P["kappa"] * 3.6 * regrid(g[166][3][h], lat_s, lon_s, LAT, LON)
+        U = P["kappa"] * 3.6 * regrid(g[up][3][h], lat_s, lon_s, LAT, LON)   # m/s -> km/jam, x kappa
+        V = P["kappa"] * 3.6 * regrid(g[up + 1][3][h], lat_s, lon_s, LAT, LON)
         if k == 0:
             cd, ca = cfl_check(D, U, V, dx, dy, P["dt_h"])
             if verbose: print(f"CFL difusi={cd:.3f} adveksi={ca:.3f} (harus <1)")
@@ -217,8 +217,8 @@ def hotspots_to_grid(csv_path, LAT, LON, date, buffer_cells=1):
 def main():
     import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt, json
     ap = argparse.ArgumentParser()
-    ap.add_argument("--grib", default="data.grib"); ap.add_argument("--out", default="hasil")
-    ap.add_argument("--start", default="2026-08-10"); ap.add_argument("--days", type=float, default=14)
+    ap.add_argument("--grib", default="data_1.grib"); ap.add_argument("--out", default="hasil")
+    ap.add_argument("--start", default="2026-09-01"); ap.add_argument("--days", type=float, default=30)
     ap.add_argument("--dlon", type=float, default=0.02)
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
     g = read_grib1(a.grib); t_start = dt.datetime.fromisoformat(a.start)
@@ -290,9 +290,9 @@ def main():
 
     fig, ax = plt.subplots(figsize=(6, 5)); step_ = 20
     ax.quiver(R0["LON"][::step_, ::step_], R0["LAT"][::step_, ::step_],
-              regrid(g[165][3][int((t_start - g[165][0][0]).total_seconds() // 3600)], g[165][1], g[165][2], R0["LAT"], R0["LON"])[::step_, ::step_],
-              regrid(g[166][3][int((t_start - g[165][0][0]).total_seconds() // 3600)], g[165][1], g[165][2], R0["LAT"], R0["LON"])[::step_, ::step_])
-    ax.set_title("Angin 10 m (ERA5) pada " + a.start); plt.savefig(os.path.join(a.out, "fig3_angin.png"), dpi=150); plt.close()
+              regrid(g[246][3][int((t_start - g[246][0][0]).total_seconds() // 3600)], g[165][1], g[165][2], R0["LAT"], R0["LON"])[::step_, ::step_],
+              regrid(g[247][3][int((t_start - g[246][0][0]).total_seconds() // 3600)], g[165][1], g[165][2], R0["LAT"], R0["LON"])[::step_, ::step_])
+    ax.set_title("Angin 100 m (ERA5) pada " + a.start); plt.savefig(os.path.join(a.out, "fig3_angin.png"), dpi=150); plt.close()
 
 if __name__ == "__main__":
     main()
