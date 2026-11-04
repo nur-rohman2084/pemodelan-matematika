@@ -21,7 +21,8 @@
 1. Hasil di folder `hasil/` pada commit sebelumnya dihitung dengan konfigurasi lama (validasi 29 hari; eksperimen sintetis menggunakan u10 dan tanggal Agustus). Angka, tabel, dan gambar lama **belum menjadi hasil konfigurasi baru**.
 2. Jalankan ulang notebook utama dari awal sampai akhir dengan seluruh berkas masukan tersedia. Regenerasikan `hasil/hasil_sintetis.json`, `hasil/hasil_validasi.json`, `hasil/kalibrasi.csv`, `hasil/tabel_metrik.csv`, dan seluruh gambar sebelum angka atau gambar dimasukkan ke artikel.
 3. Skrip `validasi_hotspot.py` adalah eksperimen validasi dasar tanpa kelembapan tanah dan tanpa suku penyalaan baru. Jangan mencampur metriknya dengan hasil validasi v2 dari notebook.
-4. Koefisien adveksi angin `kappa` sekarang menjadi bagian grid search validasi; jangan menggunakan hasil kalibrasi lama yang dibuat saat `kappa` dipatok nol.\n5. Pada notebook utama, mask gambut validasi masih seragam (`G=1)) karena CSV gambut yang tersedia hanya berisi atribut tanpa geometri. Eksperimen sintetis memakai mask gambut sintetis. Keduanya tidak boleh ditulis seolah-olah memakai peta gambut aktual.
+4. Koefisien adveksi angin `kappa` sekarang menjadi bagian grid search validasi; jangan menggunakan hasil kalibrasi lama yang dibuat saat `kappa` dipatok nol.
+5. Pada notebook utama, mask gambut validasi masih seragam (`G=1`) karena CSV gambut yang tersedia hanya berisi atribut tanpa geometri. Eksperimen sintetis memakai mask gambut sintetis. Keduanya tidak boleh ditulis seolah-olah memakai peta gambut aktual.
 6. Hotspot VIIRS merupakan deteksi anomali termal, bukan batas langsung luas area terbakar. Istilah luas observasi perlu dijelaskan sebagai luas sel hotspot kumulatif setelah rasterisasi dan dilasi satu sel.
 7. Model ini adalah model numerik berbasis persamaan RDA yang diselesaikan dengan finite difference (Euler eksplisit, adveksi upwind dan difusi beda pusat), bukan model machine learning.
 
