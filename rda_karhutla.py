@@ -214,7 +214,7 @@ def hotspots_to_grid(csv_path, LAT, LON, date, buffer_cells=1):
 # --------------------------------------------------------------------------
 # 5. Eksperimen: baseline, sensitivitas, twin experiment
 # --------------------------------------------------------------------------
-def main():
+def main(argv=None):
     import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt, json
     ap = argparse.ArgumentParser()
     ap.add_argument("--grib", default="data_1.grib"); ap.add_argument("--out", default="hasil")
