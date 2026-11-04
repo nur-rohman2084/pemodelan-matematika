@@ -214,13 +214,13 @@ def hotspots_to_grid(csv_path, LAT, LON, date, buffer_cells=1):
 # --------------------------------------------------------------------------
 # 5. Eksperimen: baseline, sensitivitas, twin experiment
 # --------------------------------------------------------------------------
-def main():
+def main(argv=None):
     import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt, json
     ap = argparse.ArgumentParser()
     ap.add_argument("--grib", default="data_1.grib"); ap.add_argument("--out", default="hasil")
     ap.add_argument("--start", default="2026-09-01"); ap.add_argument("--days", type=float, default=30)
     ap.add_argument("--dlon", type=float, default=0.02)
-    a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
+    a = ap.parse_args(argv); os.makedirs(a.out, exist_ok=True)
     g = read_grib1(a.grib); t_start = dt.datetime.fromisoformat(a.start)
     ign = [(-2.6, 113.4, 1.0, 5.0), (-1.9, 114.3, 1.0, 5.0)]     # titik api awal ilustratif
     base = dict(dlon=a.dlon, _g=g)
