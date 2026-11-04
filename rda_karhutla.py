@@ -153,7 +153,13 @@ def run(params, grib_path, t_start, days, ignition, out_frames=None, verbose=Tru
     D = P["Dg"] * G + P["Dn"] * (1 - G); r = P["rg"] * G + P["rn"] * (1 - G)
     g = read_grib1(grib_path) if "_g" not in P else P["_g"]
     up = P["uparam"]; T, lat_s, lon_s, _ = g[up]
-    t0 = int((t_start - T[0]).total_seconds() // 3600); n = int(days * 24 / P["dt_h"])\n    if t0 < 0 or t0 + n > len(T):\n        raise ValueError(f"Data angin u100/v100 tidak mencakup seluruh simulasi: diminta indeks jam {t0}..{t0+n-1}, tersedia 0..{len(T)-1}")
+    t0 = int((t_start - T[0]).total_seconds() // 3600)
+    n = int(days * 24 / P["dt_h"])
+    if t0 < 0 or t0 + n > len(T):
+        raise ValueError(
+            f"Data angin u100/v100 tidak mencakup seluruh simulasi: "
+            f"diminta indeks jam {t0}..{t0+n-1}, tersedia 0..{len(T)-1}"
+        )
     F = np.zeros(LAT.shape); B = np.ones(LAT.shape)
     for (la, lo, amp, rad) in ignition:          # titik api awal (Gaussian kecil)
         if P.get("snap_peat", True):             # geser ke sel gambut terdekat
