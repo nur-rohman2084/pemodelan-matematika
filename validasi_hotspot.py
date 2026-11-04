@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Validasi model RDA terhadap hotspot VIIRS/NOAA-20 (1-12 Sep 2026) dengan angin ERA5.
+Validasi dasar model RDA terhadap hotspot VIIRS/NOAA-20 (1-30 Sep 2026) dengan angin ERA5 100 m.
 
 Alur: hotspot hari-1 -> kondisi awal F0; simulasi 11 hari; bandingkan Omega_f(t) dengan
 hotspot kumulatif (di-dilasi 1 sel). Kalibrasi (r_eff, D, kappa) pada hari 2-6, uji pada hari 7-11.
@@ -23,9 +23,9 @@ if _PROJECT_DIR not in sys.path:
 from rda_karhutla import (read_grib1, make_grid, regrid, step, cfl_check,
                           iou, dice, rmse, mae, r2)
 
-BBOX = (-3.0, 0.7, 110.5, 115.7)     # batas selatan = batas data angin ERA5
+BBOX = (-3.0, -1.0, 111.0, 116.0)  # domain validasi pada data ERA5 100 m
 T0 = dt.datetime(2026, 9, 1, 0, 0)   # UTC
-NDAYS = 11
+NDAYS = 30
 
 def load_hotspots(path, keep=("Medium", "High")):
     d = pd.read_csv(path, sep=";", decimal=",", encoding="utf-8-sig")
@@ -49,12 +49,12 @@ def to_mask(df, LAT, LON, dlon, buf=1):
 
 def simulate(g, F0, LAT, LON, dx, dy, reff, D, kappa, dt_h=1.0, Fc=0.5):
     """Euler-upwind-central; snapshot Omega_f di akhir tiap hari."""
-    T, lat_s, lon_s, _ = g[165]; h0 = int((T0 - T[0]).total_seconds() // 3600)
+    T, lat_s, lon_s, _ = g[246]; h0 = int((T0 - T[0]).total_seconds() // 3600)
     Dm = np.full(LAT.shape, D); rm = np.full(LAT.shape, reff); m = np.zeros(LAT.shape)
     F = F0.copy(); B = np.ones(LAT.shape); snaps = {}
     for k in range(NDAYS * 24):
-        U = kappa * 3.6 * regrid(g[165][3][h0 + k], lat_s, lon_s, LAT, LON)
-        V = kappa * 3.6 * regrid(g[166][3][h0 + k], lat_s, lon_s, LAT, LON)
+        U = kappa * 3.6 * regrid(g[246][3][h0 + k], lat_s, lon_s, LAT, LON)
+        V = kappa * 3.6 * regrid(g[247][3][h0 + k], lat_s, lon_s, LAT, LON)
         if k == 0:
             cd, ca = cfl_check(Dm, U, V, dx, dy, dt_h); assert cd < 1 and ca < 1
         F, B = step(F, B, U, V, Dm, rm, 0.0, m, 1.0, dx, dy, dt_h, 0.0, False)
@@ -74,17 +74,17 @@ def score(snaps, obs_cum, days, dx, dy):
 def main():
     import matplotlib; matplotlib.use("Agg"); import matplotlib.pyplot as plt
     ap = argparse.ArgumentParser()
-    ap.add_argument("--grib", default="data.grib"); ap.add_argument("--hot", default="sebaran-hotspot.csv")
+    ap.add_argument("--grib", default="data_1.grib"); ap.add_argument("--hot", default="sebaran-hotspot.csv")
     ap.add_argument("--out", default="hasil_validasi"); ap.add_argument("--dlon", type=float, default=0.03)
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
 
     g = read_grib1(a.grib)
     df, info = load_hotspots(a.hot); print("hotspot:", info)
     lat, lon, LAT, LON, dx, dy = make_grid(*BBOX, a.dlon)
-    # observasi kumulatif sampai akhir hari k (k=1..11)
+    # observasi kumulatif sampai akhir hari k (k=1..30)
     obs_cum = {k: to_mask(df[df.hour < 24 * k], LAT, LON, a.dlon) for k in range(1, NDAYS + 1)}
     F0 = obs_cum[1].astype(float)                       # kondisi awal = hotspot hari-1
-    cal_days, test_days = list(range(2, 7)), list(range(7, 12))
+    cal_days, test_days = list(range(2, 16)), list(range(16, 31))
 
     # pembanding persistensi (tanpa penyebaran)
     persist = {k: F0 >= 0.5 for k in range(1, NDAYS + 1)}
@@ -128,7 +128,7 @@ def main():
     # ---- gambar
     ext = [LON[0, 0], LON[0, -1], LAT[0, 0], LAT[-1, 0]]
     fig, ax = plt.subplots(1, 3, figsize=(15, 4.6), sharey=True)
-    for x, k in zip(ax, [1, 6, 11]):
+    for x, k in zip(ax, [1, 15, 30]):
         x.imshow(np.where(obs_cum[k], 1, np.nan), origin="lower", extent=ext, cmap="Blues", vmin=0, vmax=1.6, alpha=.8)
         x.contour(LON, LAT, (snaps[k] if k > 1 else persist[1]).astype(float), levels=[.5], colors="red", linewidths=.8)
         x.set_title(f"Hari ke-{k}: biru=hotspot kumulatif, merah=front model"); x.set_xlabel("Bujur")
@@ -137,10 +137,10 @@ def main():
     fig, ax = plt.subplots(1, 2, figsize=(11, 3.8)); ds = cal_days + test_days
     ax[0].plot(ds, [s_mod[k]["Dice"] for k in ds], "o-", label="Model RDA")
     ax[0].plot(ds, [sp[k]["Dice"] for k in ds], "s--", label="Persistensi")
-    ax[0].axvline(6.5, color="gray", ls=":"); ax[0].set_xlabel("Hari"); ax[0].set_ylabel("Dice"); ax[0].legend()
+    ax[0].axvline(15.5, color="gray", ls=":"); ax[0].set_xlabel("Hari"); ax[0].set_ylabel("Dice"); ax[0].legend()
     ax[1].plot(ds, [s_mod[k]["area_obs"] for k in ds], "o-", label="Hotspot kumulatif")
     ax[1].plot(ds, [s_mod[k]["area_mod"] for k in ds], "s-", label="Model")
-    ax[1].axvline(6.5, color="gray", ls=":"); ax[1].set_xlabel("Hari"); ax[1].set_ylabel("Luas (km²)"); ax[1].legend()
+    ax[1].axvline(15.5, color="gray", ls=":"); ax[1].set_xlabel("Hari"); ax[1].set_ylabel("Luas (km²)"); ax[1].legend()
     for x in ax: x.grid(alpha=.3)
     plt.tight_layout(); plt.savefig(os.path.join(a.out, "fig5_metrik.png"), dpi=140); plt.close()
 
